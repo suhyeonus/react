@@ -7,7 +7,7 @@
  * @noflow
  * @nolint
  * @preventMunge
- * @generated SignedSource<<d46ea7044f940d678465b87f5ab226ba>>
+ * @generated SignedSource<<f4ff442e39c506a76d4d4378b7e4664e>>
  */
 
 "use strict";
@@ -105,6 +105,7 @@ __DEV__ &&
         findDOMNode: null
       },
       REACT_PORTAL_TYPE = Symbol.for("react.portal"),
+      REACT_RECOVERABLE_TYPE = Symbol.for("react.recoverable"),
       REACT_OPTIMISTIC_KEY = Symbol.for("react.optimistic_key"),
       ReactSharedInternals =
         React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
@@ -120,6 +121,15 @@ __DEV__ &&
       );
     exports.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE =
       Internals;
+    exports.browser = function () {
+      var recoverable = Error(
+        "Recoverable Exception: This is not a real error! It's an implementation detail of `use(browser())` to defer rendering to the browser. `use(browser())` can only be used inside a `<Suspense>` boundary. If a server render errors with this as its cause, the component that called `use(browser())` does not have a `<Suspense>` boundary above it."
+      );
+      Object.defineProperty(recoverable, "$$typeof", {
+        value: REACT_RECOVERABLE_TYPE
+      });
+      return recoverable;
+    };
     exports.createPortal = function (children, container) {
       var key =
         2 < arguments.length && void 0 !== arguments[2] ? arguments[2] : null;
@@ -292,7 +302,11 @@ __DEV__ &&
                     ? options.integrity
                     : void 0,
                 nonce:
-                  "string" === typeof options.nonce ? options.nonce : void 0
+                  "string" === typeof options.nonce ? options.nonce : void 0,
+                fetchPriority:
+                  "string" === typeof options.fetchPriority
+                    ? options.fetchPriority
+                    : void 0
               });
         } else null == options && Internals.d.M(href);
     };
@@ -394,6 +408,11 @@ __DEV__ &&
               integrity:
                 "string" === typeof options.integrity
                   ? options.integrity
+                  : void 0,
+              nonce: "string" === typeof options.nonce ? options.nonce : void 0,
+              fetchPriority:
+                "string" === typeof options.fetchPriority
+                  ? options.fetchPriority
                   : void 0
             }))
           : Internals.d.m(href));
@@ -410,5 +429,5 @@ __DEV__ &&
     exports.useFormStatus = function () {
       return resolveDispatcher().useHostTransitionStatus();
     };
-    exports.version = "19.3.0-native-fb-3aaab92a-20260204";
+    exports.version = "19.3.0-native-fb-ec61f187-20260806";
   })();
