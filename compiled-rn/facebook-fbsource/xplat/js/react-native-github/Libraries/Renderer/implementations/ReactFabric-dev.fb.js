@@ -7,7 +7,7 @@
  * @noflow
  * @nolint
  * @preventMunge
- * @generated SignedSource<<c915b0f21d9693a16132f659c8d07852>>
+ * @generated SignedSource<<e90a3380e98b3a8de904cb5fab2b489a>>
  */
 
 "use strict";
@@ -1893,9 +1893,34 @@ __DEV__ &&
       }
       return null;
     }
-    function findNextSibling(child) {
-      searchTarget = child;
-      return !0;
+    function findFragmentInstanceOrTextInstanceSiblings(
+      result,
+      self,
+      child,
+      state
+    ) {
+      for (; null !== child; ) {
+        if (child === self) state.foundSelf = !0;
+        else if (
+          5 === child.tag ||
+          27 === child.tag ||
+          (enableFragmentRefsTextNodes && 6 === child.tag)
+        ) {
+          if (state.foundSelf) return (result[1] = child), !0;
+          result[0] = child;
+        } else if (
+          (22 !== child.tag || null === child.memoizedState) &&
+          findFragmentInstanceOrTextInstanceSiblings(
+            result,
+            self,
+            child.child,
+            state
+          )
+        )
+          return !0;
+        child = child.sibling;
+      }
+      return !1;
     }
     function createCursor(defaultValue) {
       return { current: defaultValue };
@@ -13226,7 +13251,12 @@ __DEV__ &&
               offscreenSubtreeIsHidden ||
               offscreenSubtreeWasHidden ||
               0 === (finishedWork.mode & 1) ||
-              (recursivelyTraverseDisappearLayoutEffects(finishedWork),
+              ((root = _eventPayloads$ii2 || offscreenSubtreeWasHidden),
+              (lanes = offscreenSubtreeIsHidden),
+              (current = offscreenSubtreeWasHidden),
+              (offscreenSubtreeIsHidden = ii || offscreenSubtreeIsHidden),
+              (offscreenSubtreeWasHidden = root),
+              recursivelyTraverseDisappearLayoutEffects(finishedWork),
               0 !== (finishedWork.mode & 2) &&
                 0 <= componentEffectStartTime &&
                 0 <= componentEffectEndTime &&
@@ -13236,7 +13266,9 @@ __DEV__ &&
                   componentEffectStartTime,
                   componentEffectEndTime,
                   "Disconnect"
-                )));
+                ),
+              (offscreenSubtreeIsHidden = lanes),
+              (offscreenSubtreeWasHidden = current)));
           flags & 4 &&
             ((root = finishedWork.updateQueue),
             null !== root &&
@@ -13463,7 +13495,6 @@ __DEV__ &&
           recursivelyTraverseDisappearLayoutEffects(finishedWork);
           break;
         case 27:
-        case 26:
         case 5:
           safelyDetachRef(finishedWork, finishedWork.return);
           enableFragmentRefs &&
@@ -13471,6 +13502,10 @@ __DEV__ &&
               27 === finishedWork.tag ||
               (enableFragmentRefsTextNodes && 6 === finishedWork.tag)) &&
             commitFragmentInstanceDeletionEffects(finishedWork);
+          recursivelyTraverseDisappearLayoutEffects(finishedWork);
+          break;
+        case 26:
+          safelyDetachRef(finishedWork, finishedWork.return);
           recursivelyTraverseDisappearLayoutEffects(finishedWork);
           break;
         case 22:
@@ -13562,7 +13597,6 @@ __DEV__ &&
           safelyAttachRef(finishedWork, finishedWork.return);
           break;
         case 27:
-        case 26:
         case 5:
           if (
             enableFragmentRefs &&
@@ -13577,6 +13611,18 @@ __DEV__ &&
               if (isFragmentInstanceHostParent(parent)) break a;
               parent = parent.return;
             }
+          recursivelyTraverseReappearLayoutEffects(
+            finishedRoot,
+            finishedWork,
+            layoutEffectTraversalFlags
+          );
+          includeWorkInProgressEffects &&
+            null === current &&
+            flags & 4 &&
+            commitHostMount(finishedWork);
+          safelyAttachRef(finishedWork, finishedWork.return);
+          break;
+        case 26:
           recursivelyTraverseReappearLayoutEffects(
             finishedRoot,
             finishedWork,
@@ -13946,14 +13992,14 @@ __DEV__ &&
         case 23:
           break;
         case 22:
-          var _instance = finishedWork.stateNode;
+          var _instance3 = finishedWork.stateNode;
           prevProfilerEffectDuration = finishedWork.alternate;
           null !== finishedWork.memoizedState
             ? (isViewTransitionEligible &&
                 null !== prevProfilerEffectDuration &&
                 null === prevProfilerEffectDuration.memoizedState &&
                 restoreEnterOrExitViewTransitions(prevProfilerEffectDuration),
-              _instance._visibility & OffscreenPassiveEffectsConnected
+              _instance3._visibility & OffscreenPassiveEffectsConnected
                 ? recursivelyTraversePassiveMountEffects(
                     finishedRoot,
                     finishedWork,
@@ -13969,7 +14015,7 @@ __DEV__ &&
                       committedTransitions,
                       endTime
                     )
-                  : ((_instance._visibility |=
+                  : ((_instance3._visibility |=
                       OffscreenPassiveEffectsConnected),
                     recursivelyTraversePassiveMountEffects(
                       finishedRoot,
@@ -13982,7 +14028,7 @@ __DEV__ &&
                 null !== prevProfilerEffectDuration &&
                 null !== prevProfilerEffectDuration.memoizedState &&
                 restoreEnterOrExitViewTransitions(finishedWork),
-              _instance._visibility & OffscreenPassiveEffectsConnected
+              _instance3._visibility & OffscreenPassiveEffectsConnected
                 ? recursivelyTraversePassiveMountEffects(
                     finishedRoot,
                     finishedWork,
@@ -13990,7 +14036,7 @@ __DEV__ &&
                     committedTransitions,
                     endTime
                   )
-                : ((_instance._visibility |= OffscreenPassiveEffectsConnected),
+                : ((_instance3._visibility |= OffscreenPassiveEffectsConnected),
                   recursivelyTraverseReconnectPassiveEffects(
                     finishedRoot,
                     finishedWork,
@@ -14167,9 +14213,9 @@ __DEV__ &&
         case 23:
           break;
         case 22:
-          var _instance2 = finishedWork.stateNode;
+          var _instance4 = finishedWork.stateNode;
           null !== finishedWork.memoizedState
-            ? _instance2._visibility & OffscreenPassiveEffectsConnected
+            ? _instance4._visibility & OffscreenPassiveEffectsConnected
               ? recursivelyTraverseReconnectPassiveEffects(
                   finishedRoot,
                   finishedWork,
@@ -14186,7 +14232,7 @@ __DEV__ &&
                     committedTransitions,
                     endTime
                   )
-                : ((_instance2._visibility |= OffscreenPassiveEffectsConnected),
+                : ((_instance4._visibility |= OffscreenPassiveEffectsConnected),
                   recursivelyTraverseReconnectPassiveEffects(
                     finishedRoot,
                     finishedWork,
@@ -14195,7 +14241,7 @@ __DEV__ &&
                     includeWorkInProgressEffects,
                     endTime
                   ))
-            : ((_instance2._visibility |= OffscreenPassiveEffectsConnected),
+            : ((_instance4._visibility |= OffscreenPassiveEffectsConnected),
               recursivelyTraverseReconnectPassiveEffects(
                 finishedRoot,
                 finishedWork,
@@ -19021,7 +19067,6 @@ __DEV__ &&
       ContinuousEventPriority = 8,
       DefaultEventPriority = 32,
       IdleEventPriority = 268435456,
-      searchTarget = null,
       bind = Function.prototype.bind,
       valueStack = [];
     var fiberStack = [];
@@ -21206,21 +21251,26 @@ __DEV__ &&
         void 0
       );
       if (0 === children.length) {
-        children = getPublicInstanceFromHostFiber(parentHostFiber);
-        var fragmentFiber = this._fragmentFiber;
+        var parentHostInstance =
+          getPublicInstanceFromHostFiber(parentHostFiber);
+        children = this._fragmentFiber;
         parentHostFiber = getPublicInstanceFromHostFiber;
-        var parentResult = children.compareDocumentPosition(otherNode);
+        var parentResult =
+          parentHostInstance.compareDocumentPosition(otherNode);
         var result = parentResult;
-        children === otherNode
+        parentHostInstance === otherNode
           ? (result = Node.DOCUMENT_POSITION_CONTAINS)
           : parentResult & Node.DOCUMENT_POSITION_CONTAINED_BY &&
-            (traverseVisibleInstancesAndTextInstances(
-              fragmentFiber.sibling,
-              !1,
-              findNextSibling
-            ),
-            (children = searchTarget),
-            (searchTarget = null),
+            ((parentHostInstance = [null, null]),
+            (result = getFragmentParentInstanceOrContainerFiber(children)),
+            null !== result &&
+              findFragmentInstanceOrTextInstanceSiblings(
+                parentHostInstance,
+                children,
+                result.child,
+                { foundSelf: !1 }
+              ),
+            (children = parentHostInstance[1]),
             null === children
               ? (result = Node.DOCUMENT_POSITION_PRECEDING)
               : ((otherNode =
@@ -21234,20 +21284,20 @@ __DEV__ &&
       }
       parentHostFiber = getPublicInstanceFromHostFiber(children[0]);
       children = getPublicInstanceFromHostFiber(children[children.length - 1]);
-      fragmentFiber = parentHostFiber.compareDocumentPosition(otherNode);
+      parentHostInstance = parentHostFiber.compareDocumentPosition(otherNode);
       parentResult = children.compareDocumentPosition(otherNode);
       result =
-        fragmentFiber & Node.DOCUMENT_POSITION_CONTAINED_BY ||
+        parentHostInstance & Node.DOCUMENT_POSITION_CONTAINED_BY ||
         parentResult & Node.DOCUMENT_POSITION_CONTAINED_BY;
       parentResult =
-        fragmentFiber & Node.DOCUMENT_POSITION_FOLLOWING &&
+        parentHostInstance & Node.DOCUMENT_POSITION_FOLLOWING &&
         parentResult & Node.DOCUMENT_POSITION_PRECEDING;
       return parentHostFiber === otherNode ||
         children === otherNode ||
         result ||
         parentResult
         ? Node.DOCUMENT_POSITION_CONTAINED_BY
-        : fragmentFiber;
+        : parentHostInstance;
     };
     FragmentInstance.prototype.getRootNode = function (getRootNodeOptions) {
       var parentHostFiber = getFragmentParentInstanceOrContainerFiber(
@@ -21353,10 +21403,10 @@ __DEV__ &&
     (function () {
       var internals = {
         bundleType: 1,
-        version: "19.3.0-native-fb-ec61f187-20260806",
+        version: "19.3.0-native-fb-809280d5-20260811",
         rendererPackageName: "react-native-renderer",
         currentDispatcherRef: ReactSharedInternals,
-        reconcilerVersion: "19.3.0-native-fb-ec61f187-20260806"
+        reconcilerVersion: "19.3.0-native-fb-809280d5-20260811"
       };
       null !== extraDevToolsConfig &&
         (internals.rendererConfig = extraDevToolsConfig);

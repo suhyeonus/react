@@ -7,7 +7,7 @@
  * @noflow
  * @nolint
  * @preventMunge
- * @generated SignedSource<<f4ff442e39c506a76d4d4378b7e4664e>>
+ * @generated SignedSource<<a5c2270d398c9068edf68dd0018a3184>>
  */
 
 "use strict";
@@ -121,14 +121,8 @@ __DEV__ &&
       );
     exports.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE =
       Internals;
-    exports.browser = function () {
-      var recoverable = Error(
-        "Recoverable Exception: This is not a real error! It's an implementation detail of `use(browser())` to defer rendering to the browser. `use(browser())` can only be used inside a `<Suspense>` boundary. If a server render errors with this as its cause, the component that called `use(browser())` does not have a `<Suspense>` boundary above it."
-      );
-      Object.defineProperty(recoverable, "$$typeof", {
-        value: REACT_RECOVERABLE_TYPE
-      });
-      return recoverable;
+    exports.browser = function (reason) {
+      return { $$typeof: REACT_RECOVERABLE_TYPE, _reason: reason };
     };
     exports.createPortal = function (children, container) {
       var key =
@@ -429,5 +423,5 @@ __DEV__ &&
     exports.useFormStatus = function () {
       return resolveDispatcher().useHostTransitionStatus();
     };
-    exports.version = "19.3.0-native-fb-ec61f187-20260806";
+    exports.version = "19.3.0-native-fb-809280d5-20260811";
   })();
