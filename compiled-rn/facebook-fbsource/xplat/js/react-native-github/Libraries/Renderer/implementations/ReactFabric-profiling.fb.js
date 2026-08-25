@@ -7,7 +7,7 @@
  * @noflow
  * @nolint
  * @preventMunge
- * @generated SignedSource<<3aa4291f3cd58add28aa828bcaa624e7>>
+ * @generated SignedSource<<0ea080951d5478a8873ec90660adf514>>
  */
 
 "use strict";
@@ -1562,7 +1562,7 @@ function getHighestPriorityLanes(lanes) {
     case 32768:
     case 65536:
     case 131072:
-      return lanes & 261888;
+      return lanes & -lanes;
     case 262144:
     case 524288:
     case 1048576:
@@ -1634,6 +1634,22 @@ function checkIfRootIsPrerendering(root, renderLanes) {
       ~(root.suspendedLanes & ~root.pingedLanes) &
       renderLanes)
   );
+}
+function getEntangledLanes(root, renderLanes) {
+  0 !== (renderLanes & 8) && (renderLanes |= renderLanes & 32);
+  var allEntangledLanes = root.entangledLanes;
+  if (0 !== allEntangledLanes)
+    for (
+      root = root.entanglements, allEntangledLanes &= renderLanes;
+      0 < allEntangledLanes;
+
+    ) {
+      var index$6 = 31 - clz32(allEntangledLanes),
+        lane = 1 << index$6;
+      renderLanes |= root[index$6];
+      allEntangledLanes &= ~lane;
+    }
+  return renderLanes;
 }
 function computeExpirationTime(lane, currentTime) {
   switch (lane) {
@@ -9161,13 +9177,12 @@ function pushMutationContext() {
   viewTransitionMutationContext = !1;
   return prev;
 }
-function commitHostMount(finishedWork) {
-  try {
-    throw Error(
-      "The current renderer does not support mutation. This error is likely caused by a bug in React. Please file an issue."
-    );
-  } catch (error) {
-    captureCommitPhaseError(finishedWork, finishedWork.return, error);
+function commitFragmentInstanceInsertionEffects(fiber) {
+  for (var parent = fiber.return; null !== parent; ) {
+    isFragmentInstanceParent(parent) &&
+      commitNewChildToFragmentInstance(fiber.stateNode, parent.stateNode);
+    if (isFragmentInstanceHostBoundary(parent)) break;
+    parent = parent.return;
   }
 }
 function commitFragmentInstanceDeletionEffects(fiber) {
@@ -9181,15 +9196,24 @@ function commitFragmentInstanceDeletionEffects(fiber) {
           null != childInstance.reactFragments &&
           childInstance.reactFragments.delete(fragmentInstance));
     }
-    if (isFragmentInstanceHostParent(parent)) break;
+    if (isFragmentInstanceHostBoundary(parent)) break;
     parent = parent.return;
   }
+}
+function isFragmentInstanceHostBoundary(fiber) {
+  return 5 === fiber.tag || 3 === fiber.tag || !1;
 }
 function isFragmentInstanceParent(fiber) {
   return fiber && 7 === fiber.tag && null !== fiber.stateNode;
 }
-function isFragmentInstanceHostParent(fiber) {
-  return 5 === fiber.tag || 3 === fiber.tag || 4 === fiber.tag;
+function commitHostMount(finishedWork) {
+  try {
+    throw Error(
+      "The current renderer does not support mutation. This error is likely caused by a bug in React. Please file an issue."
+    );
+  } catch (error) {
+    captureCommitPhaseError(finishedWork, finishedWork.return, error);
+  }
 }
 function commitImmutablePlacementNodeToFragmentInstances(
   finishedWork,
@@ -10032,10 +10056,12 @@ function commitDeletionEffectsOnFiber(
       offscreenSubtreeWasHidden ||
         safelyDetachRef(deletedFiber, nearestMountedAncestor),
         enableFragmentRefs &&
-          (5 === deletedFiber.tag ||
-            (enableFragmentRefsTextNodes && 6 === deletedFiber.tag)) &&
           commitFragmentInstanceDeletionEffects(deletedFiber);
     case 6:
+      enableFragmentRefs &&
+        enableFragmentRefsTextNodes &&
+        6 === deletedFiber.tag &&
+        commitFragmentInstanceDeletionEffects(deletedFiber);
       recursivelyTraverseDeletionEffects(
         finishedRoot,
         nearestMountedAncestor,
@@ -10467,9 +10493,13 @@ function commitMutationEffectsOnFiber(finishedWork, root, lanes) {
       break;
     case 7:
       enableFragmentRefs &&
+        (flags & 512 &&
+          (offscreenSubtreeWasHidden ||
+            null === current ||
+            safelyDetachRef(current, current.return)),
         current &&
-        null !== current.stateNode &&
-        (current.stateNode._fragmentFiber = finishedWork);
+          null !== current.stateNode &&
+          (current.stateNode._fragmentFiber = finishedWork));
     default:
       recursivelyTraverseMutationEffects(root, finishedWork, lanes),
         commitReconciliationEffects(finishedWork);
@@ -10505,34 +10535,27 @@ function commitReconciliationEffects(finishedWork) {
   var flags = finishedWork.flags;
   if (flags & 2) {
     try {
-      for (
-        var parentFragmentInstances = null,
-          collectFragmentInstances = enableFragmentRefs,
-          parentFiber = finishedWork.return;
-        null !== parentFiber;
+      if (enableFragmentRefs) {
+        for (
+          var parentFragmentInstances = null, parent = finishedWork.return;
+          null !== parent;
 
-      ) {
-        if (collectFragmentInstances && isFragmentInstanceParent(parentFiber)) {
-          var fragmentInstance = parentFiber.stateNode;
-          null === parentFragmentInstances
-            ? (parentFragmentInstances = [fragmentInstance])
-            : parentFragmentInstances.push(fragmentInstance);
+        ) {
+          if (isFragmentInstanceParent(parent)) {
+            var fragmentInstance = parent.stateNode;
+            null === parentFragmentInstances
+              ? (parentFragmentInstances = [fragmentInstance])
+              : parentFragmentInstances.push(fragmentInstance);
+          }
+          if (isFragmentInstanceHostBoundary(parent)) break;
+          parent = parent.return;
         }
-        collectFragmentInstances &&
-          isFragmentInstanceHostParent(parentFiber) &&
-          (collectFragmentInstances = !1);
-        if (
-          5 === parentFiber.tag ||
-          3 === parentFiber.tag ||
-          4 === parentFiber.tag
-        )
-          break;
-        parentFiber = parentFiber.return;
-      }
+        var JSCompiler_temp = parentFragmentInstances;
+      } else JSCompiler_temp = null;
       enableFragmentRefs &&
         commitImmutablePlacementNodeToFragmentInstances(
           finishedWork,
-          parentFragmentInstances
+          JSCompiler_temp
         );
     } catch (error) {
       captureCommitPhaseError(finishedWork, finishedWork.return, error);
@@ -10659,12 +10682,15 @@ function recursivelyTraverseDisappearLayoutEffects(parentFiber) {
       case 27:
       case 5:
         safelyDetachRef(finishedWork, finishedWork.return);
-        enableFragmentRefs &&
-          (5 === finishedWork.tag ||
-            27 === finishedWork.tag ||
-            (enableFragmentRefsTextNodes && 6 === finishedWork.tag)) &&
+        !enableFragmentRefs ||
+          (5 !== finishedWork.tag && 27 !== finishedWork.tag) ||
           commitFragmentInstanceDeletionEffects(finishedWork);
         recursivelyTraverseDisappearLayoutEffects(finishedWork);
+        break;
+      case 6:
+        enableFragmentRefs &&
+          enableFragmentRefsTextNodes &&
+          commitFragmentInstanceDeletionEffects(finishedWork);
         break;
       case 26:
         safelyDetachRef(finishedWork, finishedWork.return);
@@ -10770,21 +10796,9 @@ function recursivelyTraverseReappearLayoutEffects(
         break;
       case 27:
       case 5:
-        if (
-          enableFragmentRefs &&
-          (5 === finishedWork.tag || 27 === finishedWork.tag)
-        ) {
-          instance = finishedWork;
-          for (var parent = instance.return; null !== parent; ) {
-            isFragmentInstanceParent(parent) &&
-              commitNewChildToFragmentInstance(
-                instance.stateNode,
-                parent.stateNode
-              );
-            if (isFragmentInstanceHostParent(parent)) break;
-            parent = parent.return;
-          }
-        }
+        !enableFragmentRefs ||
+          (5 !== finishedWork.tag && 27 !== finishedWork.tag) ||
+          commitFragmentInstanceInsertionEffects(finishedWork);
         recursivelyTraverseReappearLayoutEffects(
           finishedRoot,
           finishedWork,
@@ -10795,6 +10809,11 @@ function recursivelyTraverseReappearLayoutEffects(
           flags & 4 &&
           commitHostMount(finishedWork);
         safelyAttachRef(finishedWork, finishedWork.return);
+        break;
+      case 6:
+        enableFragmentRefs &&
+          enableFragmentRefsTextNodes &&
+          commitFragmentInstanceInsertionEffects(finishedWork);
         break;
       case 26:
         recursivelyTraverseReappearLayoutEffects(
@@ -12261,6 +12280,7 @@ function markRootSuspended(
   spawnedLane,
   didAttemptEntireTree
 ) {
+  suspendedLanes = getEntangledLanes(root, suspendedLanes);
   suspendedLanes &= ~workInProgressRootPingedLanes;
   suspendedLanes &= ~workInProgressRootInterleavedUpdatedLanes;
   root.suspendedLanes |= suspendedLanes;
@@ -12561,15 +12581,7 @@ function prepareFreshStack(root, lanes) {
   workInProgressRootRecoverableErrors = workInProgressRootConcurrentErrors =
     null;
   workInProgressRootDidIncludeRecursiveRenderUpdate = !1;
-  0 !== (lanes & 8) && (lanes |= lanes & 32);
-  endTime = root.entangledLanes;
-  if (0 !== endTime)
-    for (root = root.entanglements, endTime &= lanes; 0 < endTime; )
-      (clampedRenderStartTime$173 = 31 - clz32(endTime)),
-        (eventIsRepeat = 1 << clampedRenderStartTime$173),
-        (lanes |= root[clampedRenderStartTime$173]),
-        (endTime &= ~eventIsRepeat);
-  entangledRenderLanes = lanes;
+  entangledRenderLanes = getEntangledLanes(root, lanes);
   finishQueueingConcurrentUpdates();
   return previousRenderStartTime;
 }
@@ -14496,16 +14508,16 @@ batchedUpdatesImpl = function (fn, a) {
   }
 };
 var roots = new Map(),
-  internals$jscomp$inline_1675 = {
+  internals$jscomp$inline_1666 = {
     bundleType: 0,
-    version: "19.3.0-native-fb-809280d5-20260811",
+    version: "19.3.0-native-fb-6c3bd60a-20260824",
     rendererPackageName: "react-native-renderer",
     currentDispatcherRef: ReactSharedInternals,
-    reconcilerVersion: "19.3.0-native-fb-809280d5-20260811"
+    reconcilerVersion: "19.3.0-native-fb-6c3bd60a-20260824"
   };
 null !== extraDevToolsConfig &&
-  (internals$jscomp$inline_1675.rendererConfig = extraDevToolsConfig);
-internals$jscomp$inline_1675.getLaneLabelMap = function () {
+  (internals$jscomp$inline_1666.rendererConfig = extraDevToolsConfig);
+internals$jscomp$inline_1666.getLaneLabelMap = function () {
   for (
     var map = new Map(), lane = 1, index$186 = 0;
     31 > index$186;
@@ -14517,20 +14529,20 @@ internals$jscomp$inline_1675.getLaneLabelMap = function () {
   }
   return map;
 };
-internals$jscomp$inline_1675.injectProfilingHooks = function (profilingHooks) {
+internals$jscomp$inline_1666.injectProfilingHooks = function (profilingHooks) {
   injectedProfilingHooks = profilingHooks;
 };
 if ("undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__) {
-  var hook$jscomp$inline_2053 = __REACT_DEVTOOLS_GLOBAL_HOOK__;
+  var hook$jscomp$inline_2037 = __REACT_DEVTOOLS_GLOBAL_HOOK__;
   if (
-    !hook$jscomp$inline_2053.isDisabled &&
-    hook$jscomp$inline_2053.supportsFiber
+    !hook$jscomp$inline_2037.isDisabled &&
+    hook$jscomp$inline_2037.supportsFiber
   )
     try {
-      (rendererID = hook$jscomp$inline_2053.inject(
-        internals$jscomp$inline_1675
+      (rendererID = hook$jscomp$inline_2037.inject(
+        internals$jscomp$inline_1666
       )),
-        (injectedHook = hook$jscomp$inline_2053);
+        (injectedHook = hook$jscomp$inline_2037);
     } catch (err) {}
 }
 exports.createPortal = function (children, containerTag) {

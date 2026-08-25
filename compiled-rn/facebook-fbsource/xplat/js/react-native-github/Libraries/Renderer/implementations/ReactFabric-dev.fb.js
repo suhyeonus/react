@@ -7,7 +7,7 @@
  * @noflow
  * @nolint
  * @preventMunge
- * @generated SignedSource<<e90a3380e98b3a8de904cb5fab2b489a>>
+ * @generated SignedSource<<c24aea1dfcd3fb4367d6d3d1db238e3e>>
  */
 
 "use strict";
@@ -1458,7 +1458,7 @@ __DEV__ &&
         case 32768:
         case 65536:
         case 131072:
-          return lanes & 261888;
+          return lanes & -lanes;
         case 262144:
         case 524288:
         case 1048576:
@@ -1536,6 +1536,22 @@ __DEV__ &&
           ~(root.suspendedLanes & ~root.pingedLanes) &
           renderLanes)
       );
+    }
+    function getEntangledLanes(root, renderLanes) {
+      0 !== (renderLanes & 8) && (renderLanes |= renderLanes & 32);
+      var allEntangledLanes = root.entangledLanes;
+      if (0 !== allEntangledLanes)
+        for (
+          root = root.entanglements, allEntangledLanes &= renderLanes;
+          0 < allEntangledLanes;
+
+        ) {
+          var index = 31 - clz32(allEntangledLanes),
+            lane = 1 << index;
+          renderLanes |= root[index];
+          allEntangledLanes &= ~lane;
+        }
+      return renderLanes;
     }
     function computeExpirationTime(lane, currentTime) {
       switch (lane) {
@@ -11827,6 +11843,35 @@ __DEV__ &&
       viewTransitionMutationContext = !1;
       return prev;
     }
+    function commitFragmentInstanceInsertionEffects(fiber) {
+      for (var parent = fiber.return; null !== parent; ) {
+        isFragmentInstanceParent(parent) &&
+          commitNewChildToFragmentInstance(fiber.stateNode, parent.stateNode);
+        if (isFragmentInstanceHostBoundary(parent)) break;
+        parent = parent.return;
+      }
+    }
+    function commitFragmentInstanceDeletionEffects(fiber) {
+      for (var parent = fiber.return; null !== parent; ) {
+        if (isFragmentInstanceParent(parent)) {
+          var childInstance = fiber.stateNode,
+            fragmentInstance = parent.stateNode;
+          (enableFragmentRefsTextNodes && null == childInstance.canonical) ||
+            ((childInstance = getPublicInstance(childInstance)),
+            enableFragmentRefsInstanceHandles &&
+              null != childInstance.reactFragments &&
+              childInstance.reactFragments.delete(fragmentInstance));
+        }
+        if (isFragmentInstanceHostBoundary(parent)) break;
+        parent = parent.return;
+      }
+    }
+    function isFragmentInstanceHostBoundary(fiber) {
+      return 5 === fiber.tag || 3 === fiber.tag || !1;
+    }
+    function isFragmentInstanceParent(fiber) {
+      return fiber && 7 === fiber.tag && null !== fiber.stateNode;
+    }
     function commitHostMount(finishedWork) {
       var type = finishedWork.type,
         props = finishedWork.memoizedProps,
@@ -11844,56 +11889,24 @@ __DEV__ &&
         captureCommitPhaseError(finishedWork, finishedWork.return, error);
       }
     }
-    function commitFragmentInstanceDeletionEffects(fiber) {
-      for (var parent = fiber.return; null !== parent; ) {
-        if (isFragmentInstanceParent(parent)) {
-          var childInstance = fiber.stateNode,
-            fragmentInstance = parent.stateNode;
-          (enableFragmentRefsTextNodes && null == childInstance.canonical) ||
-            ((childInstance = getPublicInstance(childInstance)),
-            enableFragmentRefsInstanceHandles &&
-              null != childInstance.reactFragments &&
-              childInstance.reactFragments.delete(fragmentInstance));
-        }
-        if (isFragmentInstanceHostParent(parent)) break;
-        parent = parent.return;
-      }
-    }
-    function isFragmentInstanceParent(fiber) {
-      return fiber && 7 === fiber.tag && null !== fiber.stateNode;
-    }
-    function isFragmentInstanceHostParent(fiber) {
-      return 5 === fiber.tag || 3 === fiber.tag || 4 === fiber.tag;
-    }
     function commitPlacement(finishedWork) {
-      for (
-        var parentFragmentInstances = null,
-          collectFragmentInstances = enableFragmentRefs,
-          parentFiber = finishedWork.return;
-        null !== parentFiber;
-
-      ) {
-        if (collectFragmentInstances && isFragmentInstanceParent(parentFiber)) {
-          var fragmentInstance = parentFiber.stateNode;
-          null === parentFragmentInstances
-            ? (parentFragmentInstances = [fragmentInstance])
-            : parentFragmentInstances.push(fragmentInstance);
+      if (enableFragmentRefs) {
+        var JSCompiler_temp = null;
+        for (var parent = finishedWork.return; null !== parent; ) {
+          if (isFragmentInstanceParent(parent)) {
+            var fragmentInstance = parent.stateNode;
+            null === JSCompiler_temp
+              ? (JSCompiler_temp = [fragmentInstance])
+              : JSCompiler_temp.push(fragmentInstance);
+          }
+          if (isFragmentInstanceHostBoundary(parent)) break;
+          parent = parent.return;
         }
-        collectFragmentInstances &&
-          isFragmentInstanceHostParent(parentFiber) &&
-          (collectFragmentInstances = !1);
-        if (
-          5 === parentFiber.tag ||
-          3 === parentFiber.tag ||
-          4 === parentFiber.tag
-        )
-          break;
-        parentFiber = parentFiber.return;
-      }
+      } else JSCompiler_temp = null;
       enableFragmentRefs &&
         commitImmutablePlacementNodeToFragmentInstances(
           finishedWork,
-          parentFragmentInstances
+          JSCompiler_temp
         );
     }
     function commitImmutablePlacementNodeToFragmentInstances(
@@ -12837,10 +12850,12 @@ __DEV__ &&
           offscreenSubtreeWasHidden ||
             safelyDetachRef(deletedFiber, nearestMountedAncestor),
             enableFragmentRefs &&
-              (5 === deletedFiber.tag ||
-                (enableFragmentRefsTextNodes && 6 === deletedFiber.tag)) &&
               commitFragmentInstanceDeletionEffects(deletedFiber);
         case 6:
+          enableFragmentRefs &&
+            enableFragmentRefsTextNodes &&
+            6 === deletedFiber.tag &&
+            commitFragmentInstanceDeletionEffects(deletedFiber);
           recursivelyTraverseDeletionEffects(
             finishedRoot,
             nearestMountedAncestor,
@@ -13316,9 +13331,13 @@ __DEV__ &&
           break;
         case 7:
           enableFragmentRefs &&
+            (flags & 512 &&
+              (offscreenSubtreeWasHidden ||
+                null === current ||
+                safelyDetachRef(current, current.return)),
             current &&
-            null !== current.stateNode &&
-            (current.stateNode._fragmentFiber = finishedWork);
+              null !== current.stateNode &&
+              (current.stateNode._fragmentFiber = finishedWork));
         default:
           recursivelyTraverseMutationEffects(root, finishedWork, lanes),
             commitReconciliationEffects(finishedWork);
@@ -13497,12 +13516,15 @@ __DEV__ &&
         case 27:
         case 5:
           safelyDetachRef(finishedWork, finishedWork.return);
-          enableFragmentRefs &&
-            (5 === finishedWork.tag ||
-              27 === finishedWork.tag ||
-              (enableFragmentRefsTextNodes && 6 === finishedWork.tag)) &&
+          !enableFragmentRefs ||
+            (5 !== finishedWork.tag && 27 !== finishedWork.tag) ||
             commitFragmentInstanceDeletionEffects(finishedWork);
           recursivelyTraverseDisappearLayoutEffects(finishedWork);
+          break;
+        case 6:
+          enableFragmentRefs &&
+            enableFragmentRefsTextNodes &&
+            commitFragmentInstanceDeletionEffects(finishedWork);
           break;
         case 26:
           safelyDetachRef(finishedWork, finishedWork.return);
@@ -13598,19 +13620,9 @@ __DEV__ &&
           break;
         case 27:
         case 5:
-          if (
-            enableFragmentRefs &&
-            (5 === finishedWork.tag || 27 === finishedWork.tag)
-          )
-            a: for (var parent = finishedWork.return; null !== parent; ) {
-              isFragmentInstanceParent(parent) &&
-                commitNewChildToFragmentInstance(
-                  finishedWork.stateNode,
-                  parent.stateNode
-                );
-              if (isFragmentInstanceHostParent(parent)) break a;
-              parent = parent.return;
-            }
+          !enableFragmentRefs ||
+            (5 !== finishedWork.tag && 27 !== finishedWork.tag) ||
+            commitFragmentInstanceInsertionEffects(finishedWork);
           recursivelyTraverseReappearLayoutEffects(
             finishedRoot,
             finishedWork,
@@ -13621,6 +13633,11 @@ __DEV__ &&
             flags & 4 &&
             commitHostMount(finishedWork);
           safelyAttachRef(finishedWork, finishedWork.return);
+          break;
+        case 6:
+          enableFragmentRefs &&
+            enableFragmentRefsTextNodes &&
+            commitFragmentInstanceInsertionEffects(finishedWork);
           break;
         case 26:
           recursivelyTraverseReappearLayoutEffects(
@@ -15257,6 +15274,7 @@ __DEV__ &&
       spawnedLane,
       didAttemptEntireTree
     ) {
+      suspendedLanes = getEntangledLanes(root, suspendedLanes);
       suspendedLanes &= ~workInProgressRootPingedLanes;
       suspendedLanes &= ~workInProgressRootInterleavedUpdatedLanes;
       root.suspendedLanes |= suspendedLanes;
@@ -15678,15 +15696,7 @@ __DEV__ &&
       workInProgressRootRecoverableErrors = workInProgressRootConcurrentErrors =
         null;
       workInProgressRootDidIncludeRecursiveRenderUpdate = !1;
-      0 !== (lanes & 8) && (lanes |= lanes & 32);
-      endTime = root.entangledLanes;
-      if (0 !== endTime)
-        for (root = root.entanglements, endTime &= lanes; 0 < endTime; )
-          (debugTask = 31 - clz32(endTime)),
-            (color = 1 << debugTask),
-            (lanes |= root[debugTask]),
-            (endTime &= ~color);
-      entangledRenderLanes = lanes;
+      entangledRenderLanes = getEntangledLanes(root, lanes);
       finishQueueingConcurrentUpdates();
       root = getCurrentTime();
       1e3 < root - lastResetTime &&
@@ -21403,10 +21413,10 @@ __DEV__ &&
     (function () {
       var internals = {
         bundleType: 1,
-        version: "19.3.0-native-fb-809280d5-20260811",
+        version: "19.3.0-native-fb-6c3bd60a-20260824",
         rendererPackageName: "react-native-renderer",
         currentDispatcherRef: ReactSharedInternals,
-        reconcilerVersion: "19.3.0-native-fb-809280d5-20260811"
+        reconcilerVersion: "19.3.0-native-fb-6c3bd60a-20260824"
       };
       null !== extraDevToolsConfig &&
         (internals.rendererConfig = extraDevToolsConfig);

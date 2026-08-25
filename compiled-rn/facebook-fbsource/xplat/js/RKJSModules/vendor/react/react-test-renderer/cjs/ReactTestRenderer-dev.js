@@ -7,13 +7,13 @@
  * @noflow
  * @nolint
  * @preventMunge
- * @generated SignedSource<<28ab2abc654152a5ef472231ba98a541>>
+ * @generated SignedSource<<84c24f6bef54ca3e5c26fb4ee639587c>>
  */
 
 "use strict";
 __DEV__ &&
   (function () {
-    function JSCompiler_object_inline_createNodeMock_1203() {
+    function JSCompiler_object_inline_createNodeMock_1194() {
       return null;
     }
     function findHook(fiber, id) {
@@ -500,7 +500,7 @@ __DEV__ &&
         case 32768:
         case 65536:
         case 131072:
-          return lanes & 261888;
+          return lanes & -lanes;
         case 262144:
         case 524288:
         case 1048576:
@@ -578,6 +578,22 @@ __DEV__ &&
           ~(root.suspendedLanes & ~root.pingedLanes) &
           renderLanes)
       );
+    }
+    function getEntangledLanes(root, renderLanes) {
+      0 !== (renderLanes & 8) && (renderLanes |= renderLanes & 32);
+      var allEntangledLanes = root.entangledLanes;
+      if (0 !== allEntangledLanes)
+        for (
+          root = root.entanglements, allEntangledLanes &= renderLanes;
+          0 < allEntangledLanes;
+
+        ) {
+          var index = 31 - clz32(allEntangledLanes),
+            lane = 1 << index;
+          renderLanes |= root[index];
+          allEntangledLanes &= ~lane;
+        }
+      return renderLanes;
     }
     function computeExpirationTime(lane, currentTime) {
       switch (lane) {
@@ -11555,6 +11571,8 @@ __DEV__ &&
           safelyDetachRef(finishedWork, finishedWork.return);
           recursivelyTraverseDisappearLayoutEffects(finishedWork);
           break;
+        case 6:
+          break;
         case 26:
           safelyDetachRef(finishedWork, finishedWork.return);
           recursivelyTraverseDisappearLayoutEffects(finishedWork);
@@ -11639,6 +11657,8 @@ __DEV__ &&
             flags & 4 &&
             commitHostMount(finishedWork);
           safelyAttachRef(finishedWork, finishedWork.return);
+          break;
+        case 6:
           break;
         case 26:
           recursivelyTraverseReappearLayoutEffects(
@@ -12779,6 +12799,7 @@ __DEV__ &&
       spawnedLane,
       didAttemptEntireTree
     ) {
+      suspendedLanes = getEntangledLanes(root, suspendedLanes);
       suspendedLanes &= ~workInProgressRootPingedLanes;
       suspendedLanes &= ~workInProgressRootInterleavedUpdatedLanes;
       root.suspendedLanes |= suspendedLanes;
@@ -12867,25 +12888,12 @@ __DEV__ &&
       workInProgressRootRecoverableErrors = workInProgressRootConcurrentErrors =
         null;
       workInProgressRootDidIncludeRecursiveRenderUpdate = !1;
-      0 !== (lanes & 8) && (lanes |= lanes & 32);
-      var allEntangledLanes = root.entangledLanes;
-      if (0 !== allEntangledLanes)
-        for (
-          root = root.entanglements, allEntangledLanes &= lanes;
-          0 < allEntangledLanes;
-
-        ) {
-          var index = 31 - clz32(allEntangledLanes),
-            lane = 1 << index;
-          lanes |= root[index];
-          allEntangledLanes &= ~lane;
-        }
-      entangledRenderLanes = lanes;
+      entangledRenderLanes = getEntangledLanes(root, lanes);
       finishQueueingConcurrentUpdates();
-      lanes = getCurrentTime();
-      1e3 < lanes - lastResetTime &&
+      root = getCurrentTime();
+      1e3 < root - lastResetTime &&
         ((ReactSharedInternals.recentlyCreatedOwnerStacks = 0),
-        (lastResetTime = lanes));
+        (lastResetTime = root));
       ReactStrictModeWarnings.discardPendingWarnings();
       return timeoutHandle;
     }
@@ -17097,10 +17105,10 @@ __DEV__ &&
     (function () {
       var internals = {
         bundleType: 1,
-        version: "19.3.0-native-fb-809280d5-20260811",
+        version: "19.3.0-native-fb-6c3bd60a-20260824",
         rendererPackageName: "react-test-renderer",
         currentDispatcherRef: ReactSharedInternals,
-        reconcilerVersion: "19.3.0-native-fb-809280d5-20260811"
+        reconcilerVersion: "19.3.0-native-fb-6c3bd60a-20260824"
       };
       internals.overrideHookState = overrideHookState;
       internals.overrideHookStateDeletePath = overrideHookStateDeletePath;
@@ -17123,7 +17131,7 @@ __DEV__ &&
     exports._Scheduler = Scheduler;
     exports.act = act;
     exports.create = function (element, options) {
-      var createNodeMock = JSCompiler_object_inline_createNodeMock_1203,
+      var createNodeMock = JSCompiler_object_inline_createNodeMock_1194,
         isConcurrent = !1,
         isStrictMode = !1;
       "object" === typeof options &&
@@ -17246,5 +17254,5 @@ __DEV__ &&
             flushSyncWorkAcrossRoots_impl(0, !0));
       }
     };
-    exports.version = "19.3.0-native-fb-809280d5-20260811";
+    exports.version = "19.3.0-native-fb-6c3bd60a-20260824";
   })();

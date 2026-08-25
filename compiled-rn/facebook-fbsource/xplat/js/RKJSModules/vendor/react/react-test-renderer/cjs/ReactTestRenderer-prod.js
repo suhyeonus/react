@@ -7,7 +7,7 @@
  * @noflow
  * @nolint
  * @preventMunge
- * @generated SignedSource<<7f36bda0d0c2d33d84c30f4b00ae8b64>>
+ * @generated SignedSource<<59040e6708f6fe294942bb295675a547>>
  */
 
 "use strict";
@@ -346,7 +346,7 @@ function getHighestPriorityLanes(lanes) {
     case 32768:
     case 65536:
     case 131072:
-      return lanes & 261888;
+      return lanes & -lanes;
     case 262144:
     case 524288:
     case 1048576:
@@ -418,6 +418,22 @@ function checkIfRootIsPrerendering(root, renderLanes) {
       ~(root.suspendedLanes & ~root.pingedLanes) &
       renderLanes)
   );
+}
+function getEntangledLanes(root, renderLanes) {
+  0 !== (renderLanes & 8) && (renderLanes |= renderLanes & 32);
+  var allEntangledLanes = root.entangledLanes;
+  if (0 !== allEntangledLanes)
+    for (
+      root = root.entanglements, allEntangledLanes &= renderLanes;
+      0 < allEntangledLanes;
+
+    ) {
+      var index$2 = 31 - clz32(allEntangledLanes),
+        lane = 1 << index$2;
+      renderLanes |= root[index$2];
+      allEntangledLanes &= ~lane;
+    }
+  return renderLanes;
 }
 function computeExpirationTime(lane, currentTime) {
   switch (lane) {
@@ -8458,6 +8474,8 @@ function recursivelyTraverseDisappearLayoutEffects(parentFiber) {
         safelyDetachRef(finishedWork, finishedWork.return);
         recursivelyTraverseDisappearLayoutEffects(finishedWork);
         break;
+      case 6:
+        break;
       case 26:
         safelyDetachRef(finishedWork, finishedWork.return);
         recursivelyTraverseDisappearLayoutEffects(finishedWork);
@@ -8545,6 +8563,8 @@ function recursivelyTraverseReappearLayoutEffects(
           layoutEffectTraversalFlags
         );
         safelyAttachRef(finishedWork, finishedWork.return);
+        break;
+      case 6:
         break;
       case 26:
         recursivelyTraverseReappearLayoutEffects(
@@ -9510,6 +9530,7 @@ function markRootSuspended(
   spawnedLane,
   didAttemptEntireTree
 ) {
+  suspendedLanes = getEntangledLanes(root, suspendedLanes);
   suspendedLanes &= ~workInProgressRootPingedLanes;
   suspendedLanes &= ~workInProgressRootInterleavedUpdatedLanes;
   root.suspendedLanes |= suspendedLanes;
@@ -9588,20 +9609,7 @@ function prepareFreshStack(root, lanes) {
   workInProgressRootRecoverableErrors = workInProgressRootConcurrentErrors =
     null;
   workInProgressRootDidIncludeRecursiveRenderUpdate = !1;
-  0 !== (lanes & 8) && (lanes |= lanes & 32);
-  var allEntangledLanes = root.entangledLanes;
-  if (0 !== allEntangledLanes)
-    for (
-      root = root.entanglements, allEntangledLanes &= lanes;
-      0 < allEntangledLanes;
-
-    ) {
-      var index$2 = 31 - clz32(allEntangledLanes),
-        lane = 1 << index$2;
-      lanes |= root[index$2];
-      allEntangledLanes &= ~lane;
-    }
-  entangledRenderLanes = lanes;
+  entangledRenderLanes = getEntangledLanes(root, lanes);
   finishQueueingConcurrentUpdates();
   return timeoutHandle;
 }
@@ -11047,24 +11055,24 @@ function wrapFiber(fiber) {
     fiberToWrapper.set(fiber, wrapper));
   return wrapper;
 }
-var internals$jscomp$inline_1559 = {
+var internals$jscomp$inline_1550 = {
   bundleType: 0,
-  version: "19.3.0-native-fb-809280d5-20260811",
+  version: "19.3.0-native-fb-6c3bd60a-20260824",
   rendererPackageName: "react-test-renderer",
   currentDispatcherRef: ReactSharedInternals,
-  reconcilerVersion: "19.3.0-native-fb-809280d5-20260811"
+  reconcilerVersion: "19.3.0-native-fb-6c3bd60a-20260824"
 };
 if ("undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__) {
-  var hook$jscomp$inline_1560 = __REACT_DEVTOOLS_GLOBAL_HOOK__;
+  var hook$jscomp$inline_1551 = __REACT_DEVTOOLS_GLOBAL_HOOK__;
   if (
-    !hook$jscomp$inline_1560.isDisabled &&
-    hook$jscomp$inline_1560.supportsFiber
+    !hook$jscomp$inline_1551.isDisabled &&
+    hook$jscomp$inline_1551.supportsFiber
   )
     try {
-      (rendererID = hook$jscomp$inline_1560.inject(
-        internals$jscomp$inline_1559
+      (rendererID = hook$jscomp$inline_1551.inject(
+        internals$jscomp$inline_1550
       )),
-        (injectedHook = hook$jscomp$inline_1560);
+        (injectedHook = hook$jscomp$inline_1551);
     } catch (err) {}
 }
 exports._Scheduler = Scheduler;
@@ -11188,4 +11196,4 @@ exports.unstable_batchedUpdates = function (fn, a) {
         flushSyncWorkAcrossRoots_impl(0, !0));
   }
 };
-exports.version = "19.3.0-native-fb-809280d5-20260811";
+exports.version = "19.3.0-native-fb-6c3bd60a-20260824";
