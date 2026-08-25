@@ -14503,6 +14503,57 @@ __DEV__ &&
         captureCommitPhaseError(finishedWork, finishedWork.return, error);
       }
     }
+    function commitNewChildToFragmentInstances(fiber, parentFragmentInstances) {
+      if (
+        (5 === fiber.tag ||
+          27 === fiber.tag ||
+          (enableFragmentRefsTextNodes && 6 === fiber.tag)) &&
+        null === fiber.alternate &&
+        null !== parentFragmentInstances
+      )
+        for (var i = 0; i < parentFragmentInstances.length; i++)
+          commitNewChildToFragmentInstance(
+            fiber.stateNode,
+            parentFragmentInstances[i]
+          );
+    }
+    function commitFragmentInstanceInsertionEffects(fiber) {
+      for (var parent = fiber.return; null !== parent; ) {
+        isFragmentInstanceParent(parent) &&
+          commitNewChildToFragmentInstance(fiber.stateNode, parent.stateNode);
+        if (isFragmentInstanceHostBoundary(parent)) break;
+        parent = parent.return;
+      }
+    }
+    function commitFragmentInstanceDeletionEffects(fiber) {
+      for (var parent = fiber.return; null !== parent; ) {
+        if (isFragmentInstanceParent(parent)) {
+          var childInstance = fiber.stateNode,
+            fragmentInstance = parent.stateNode,
+            eventListeners = fragmentInstance._eventListeners;
+          if (null !== eventListeners)
+            for (var i = 0; i < eventListeners.length; i++) {
+              var _eventListeners$i3 = eventListeners[i];
+              childInstance.removeEventListener(
+                _eventListeners$i3.type,
+                _eventListeners$i3.attachedListener,
+                getAttachOptions(_eventListeners$i3.optionsOrUseCapture)
+              );
+            }
+          3 !== childInstance.nodeType &&
+            null != childInstance.reactFragments &&
+            childInstance.reactFragments.delete(fragmentInstance);
+        }
+        if (isFragmentInstanceHostBoundary(parent)) break;
+        parent = parent.return;
+      }
+    }
+    function isFragmentInstanceHostBoundary(fiber) {
+      return 5 === fiber.tag || 3 === fiber.tag || 27 === fiber.tag;
+    }
+    function isFragmentInstanceParent(fiber) {
+      return fiber && 7 === fiber.tag && null !== fiber.stateNode;
+    }
     function commitHostMount(finishedWork) {
       var type = finishedWork.type,
         props = finishedWork.memoizedProps,
@@ -14535,61 +14586,12 @@ __DEV__ &&
         captureCommitPhaseError(finishedWork, finishedWork.return, error);
       }
     }
-    function commitNewChildToFragmentInstances(fiber, parentFragmentInstances) {
-      if (
-        (5 === fiber.tag ||
-          27 === fiber.tag ||
-          (enableFragmentRefsTextNodes && 6 === fiber.tag)) &&
-        null === fiber.alternate &&
-        null !== parentFragmentInstances
-      )
-        for (var i = 0; i < parentFragmentInstances.length; i++)
-          commitNewChildToFragmentInstance(
-            fiber.stateNode,
-            parentFragmentInstances[i]
-          );
-    }
-    function commitFragmentInstanceDeletionEffects(fiber) {
-      for (var parent = fiber.return; null !== parent; ) {
-        if (isFragmentInstanceParent(parent)) {
-          var childInstance = fiber.stateNode,
-            fragmentInstance = parent.stateNode;
-          if (3 !== childInstance.nodeType) {
-            var eventListeners = fragmentInstance._eventListeners;
-            if (null !== eventListeners)
-              for (var i = 0; i < eventListeners.length; i++) {
-                var _eventListeners$i3 = eventListeners[i];
-                childInstance.removeEventListener(
-                  _eventListeners$i3.type,
-                  _eventListeners$i3.listener,
-                  _eventListeners$i3.optionsOrUseCapture
-                );
-              }
-            null != childInstance.reactFragments &&
-              childInstance.reactFragments.delete(fragmentInstance);
-          }
-        }
-        if (isFragmentInstanceHostParent(parent)) break;
-        parent = parent.return;
-      }
-    }
     function isHostParent(fiber) {
       return (
         5 === fiber.tag ||
         3 === fiber.tag ||
         26 === fiber.tag ||
         (27 === fiber.tag && isSingletonScope(fiber.type)) ||
-        4 === fiber.tag
-      );
-    }
-    function isFragmentInstanceParent(fiber) {
-      return fiber && 7 === fiber.tag && null !== fiber.stateNode;
-    }
-    function isFragmentInstanceHostParent(fiber) {
-      return (
-        5 === fiber.tag ||
-        27 === fiber.tag ||
-        3 === fiber.tag ||
         4 === fiber.tag
       );
     }
@@ -14726,28 +14728,29 @@ __DEV__ &&
     }
     function commitPlacement(finishedWork) {
       for (
-        var hostParentFiber,
-          parentFragmentInstances = null,
-          collectFragmentInstances = enableFragmentRefs,
-          parentFiber = finishedWork.return;
+        var hostParentFiber, parentFiber = finishedWork.return;
         null !== parentFiber;
 
       ) {
-        if (collectFragmentInstances && isFragmentInstanceParent(parentFiber)) {
-          var fragmentInstance = parentFiber.stateNode;
-          null === parentFragmentInstances
-            ? (parentFragmentInstances = [fragmentInstance])
-            : parentFragmentInstances.push(fragmentInstance);
-        }
-        collectFragmentInstances &&
-          isFragmentInstanceHostParent(parentFiber) &&
-          (collectFragmentInstances = !1);
         if (isHostParent(parentFiber)) {
           hostParentFiber = parentFiber;
           break;
         }
         parentFiber = parentFiber.return;
       }
+      if (enableFragmentRefs) {
+        parentFiber = null;
+        for (var parent = finishedWork.return; null !== parent; ) {
+          if (isFragmentInstanceParent(parent)) {
+            var fragmentInstance = parent.stateNode;
+            null === parentFiber
+              ? (parentFiber = [fragmentInstance])
+              : parentFiber.push(fragmentInstance);
+          }
+          if (isFragmentInstanceHostBoundary(parent)) break;
+          parent = parent.return;
+        }
+      } else parentFiber = null;
       if (null == hostParentFiber)
         throw Error(
           "Expected to find a host parent. This error is likely caused by a bug in React. Please file an issue."
@@ -14755,36 +14758,35 @@ __DEV__ &&
       switch (hostParentFiber.tag) {
         case 27:
           hostParentFiber = hostParentFiber.stateNode;
-          collectFragmentInstances = getHostSibling(finishedWork);
+          parent = getHostSibling(finishedWork);
           insertOrAppendPlacementNode(
             finishedWork,
-            collectFragmentInstances,
+            parent,
             hostParentFiber,
-            parentFragmentInstances
+            parentFiber
           );
           break;
         case 5:
-          collectFragmentInstances = hostParentFiber.stateNode;
+          parent = hostParentFiber.stateNode;
           hostParentFiber.flags & 32 &&
-            (resetTextContent(collectFragmentInstances),
-            (hostParentFiber.flags &= -33));
+            (resetTextContent(parent), (hostParentFiber.flags &= -33));
           hostParentFiber = getHostSibling(finishedWork);
           insertOrAppendPlacementNode(
             finishedWork,
             hostParentFiber,
-            collectFragmentInstances,
-            parentFragmentInstances
+            parent,
+            parentFiber
           );
           break;
         case 3:
         case 4:
           hostParentFiber = hostParentFiber.stateNode.containerInfo;
-          collectFragmentInstances = getHostSibling(finishedWork);
+          parent = getHostSibling(finishedWork);
           insertOrAppendPlacementNodeIntoContainer(
             finishedWork,
-            collectFragmentInstances,
+            parent,
             hostParentFiber,
-            parentFragmentInstances
+            parentFiber
           );
           break;
         default:
@@ -16261,10 +16263,12 @@ __DEV__ &&
           offscreenSubtreeWasHidden ||
             safelyDetachRef(deletedFiber, nearestMountedAncestor),
             enableFragmentRefs &&
-              (5 === deletedFiber.tag ||
-                (enableFragmentRefsTextNodes && 6 === deletedFiber.tag)) &&
               commitFragmentInstanceDeletionEffects(deletedFiber);
         case 6:
+          enableFragmentRefs &&
+            enableFragmentRefsTextNodes &&
+            6 === deletedFiber.tag &&
+            commitFragmentInstanceDeletionEffects(deletedFiber);
           prevHostParent = hostParent;
           prevHostParentIsContainer = hostParentIsContainer;
           hostParent = null;
@@ -17136,9 +17140,13 @@ __DEV__ &&
           break;
         case 7:
           enableFragmentRefs &&
+            (flags & 512 &&
+              (offscreenSubtreeWasHidden ||
+                null === current ||
+                safelyDetachRef(current, current.return)),
             current &&
-            null !== current.stateNode &&
-            (current.stateNode._fragmentFiber = finishedWork);
+              null !== current.stateNode &&
+              (current.stateNode._fragmentFiber = finishedWork));
         default:
           recursivelyTraverseMutationEffects(root, finishedWork, lanes),
             commitReconciliationEffects(finishedWork);
@@ -17382,15 +17390,18 @@ __DEV__ &&
             );
         case 5:
           safelyDetachRef(finishedWork, finishedWork.return);
-          enableFragmentRefs &&
-            (5 === finishedWork.tag ||
-              27 === finishedWork.tag ||
-              (enableFragmentRefsTextNodes && 6 === finishedWork.tag)) &&
+          !enableFragmentRefs ||
+            (5 !== finishedWork.tag && 27 !== finishedWork.tag) ||
             commitFragmentInstanceDeletionEffects(finishedWork);
           recursivelyTraverseDisappearLayoutEffects(
             finishedWork,
             layoutEffectTraversalFlags
           );
+          break;
+        case 6:
+          enableFragmentRefs &&
+            enableFragmentRefsTextNodes &&
+            commitFragmentInstanceDeletionEffects(finishedWork);
           break;
         case 26:
           safelyDetachRef(finishedWork, finishedWork.return);
@@ -17517,19 +17528,9 @@ __DEV__ &&
             NoLayoutEffectTraversalFlags &&
             commitHostSingletonAcquisition(finishedWork);
         case 5:
-          if (
-            enableFragmentRefs &&
-            (5 === finishedWork.tag || 27 === finishedWork.tag)
-          )
-            a: for (var parent = finishedWork.return; null !== parent; ) {
-              isFragmentInstanceParent(parent) &&
-                commitNewChildToFragmentInstance(
-                  finishedWork.stateNode,
-                  parent.stateNode
-                );
-              if (isFragmentInstanceHostParent(parent)) break a;
-              parent = parent.return;
-            }
+          !enableFragmentRefs ||
+            (5 !== finishedWork.tag && 27 !== finishedWork.tag) ||
+            commitFragmentInstanceInsertionEffects(finishedWork);
           recursivelyTraverseReappearLayoutEffects(
             finishedRoot,
             finishedWork,
@@ -17541,15 +17542,20 @@ __DEV__ &&
             commitHostMount(finishedWork);
           safelyAttachRef(finishedWork, finishedWork.return);
           break;
+        case 6:
+          enableFragmentRefs &&
+            enableFragmentRefsTextNodes &&
+            commitFragmentInstanceInsertionEffects(finishedWork);
+          break;
         case 26:
-          parent = finishedWork.stateNode;
+          var instance = finishedWork.stateNode;
           null !== finishedWork.memoizedState ||
-            null === parent ||
+            null === instance ||
             offscreenSubtreeIsHidden ||
             mountHoistable(
-              getHoistableRoot(parent.ownerDocument),
+              getHoistableRoot(instance.ownerDocument),
               finishedWork.type,
-              parent
+              instance
             );
           recursivelyTraverseReappearLayoutEffects(
             finishedRoot,
@@ -27120,6 +27126,11 @@ __DEV__ &&
       );
       return !1;
     }
+    function getAttachOptions(opts) {
+      return null == opts || "boolean" === typeof opts || !0 !== opts.once
+        ? opts
+        : { capture: opts.capture, passive: opts.passive, signal: opts.signal };
+    }
     function normalizeListenerOptions(opts) {
       return null == opts
         ? "0"
@@ -27311,23 +27322,22 @@ __DEV__ &&
       instance.reactFragments.add(fragmentInstance);
     }
     function commitNewChildToFragmentInstance(childInstance, fragmentInstance) {
-      if (3 !== childInstance.nodeType) {
-        var eventListeners = fragmentInstance._eventListeners;
-        if (null !== eventListeners)
-          for (var i = 0; i < eventListeners.length; i++) {
-            var _eventListeners$i2 = eventListeners[i];
-            childInstance.addEventListener(
-              _eventListeners$i2.type,
-              _eventListeners$i2.listener,
-              _eventListeners$i2.optionsOrUseCapture
-            );
-          }
-        null !== fragmentInstance._observers &&
+      var eventListeners = fragmentInstance._eventListeners;
+      if (null !== eventListeners)
+        for (var i = 0; i < eventListeners.length; i++) {
+          var _eventListeners$i2 = eventListeners[i];
+          childInstance.addEventListener(
+            _eventListeners$i2.type,
+            _eventListeners$i2.attachedListener,
+            getAttachOptions(_eventListeners$i2.optionsOrUseCapture)
+          );
+        }
+      3 !== childInstance.nodeType &&
+        (null !== fragmentInstance._observers &&
           fragmentInstance._observers.forEach(function (observer) {
             observer.observe(childInstance);
-          });
-        addFragmentHandleToInstance(childInstance, fragmentInstance);
-      }
+          }),
+        addFragmentHandleToInstance(childInstance, fragmentInstance));
     }
     function clearContainerSparingly(container) {
       var nextNode = container.firstChild;
@@ -32997,20 +33007,40 @@ __DEV__ &&
     ) {
       null === this._eventListeners && (this._eventListeners = []);
       var listeners = this._eventListeners;
-      -1 ===
-        indexOfEventListener(listeners, type, listener, optionsOrUseCapture) &&
-        (listeners.push({
+      if (
+        -1 ===
+        indexOfEventListener(listeners, type, listener, optionsOrUseCapture)
+      ) {
+        var fragmentInstance = this,
+          attachedListener = listener;
+        null != optionsOrUseCapture &&
+          "boolean" !== typeof optionsOrUseCapture &&
+          !0 === optionsOrUseCapture.once &&
+          (attachedListener = function (event) {
+            fragmentInstance.removeEventListener(
+              type,
+              listener,
+              optionsOrUseCapture
+            );
+            "function" === typeof listener
+              ? listener.call(this, event)
+              : listener.handleEvent(event);
+          });
+        var attachOptions = getAttachOptions(optionsOrUseCapture);
+        listeners.push({
           type: type,
           listener: listener,
-          optionsOrUseCapture: optionsOrUseCapture
-        }),
+          optionsOrUseCapture: optionsOrUseCapture,
+          attachedListener: attachedListener
+        });
         traverseFragmentInstancesAndTextInstances(
           this._fragmentFiber,
           addEventListenerToChild,
           type,
-          listener,
-          optionsOrUseCapture
-        ));
+          attachedListener,
+          attachOptions
+        );
+      }
       this._eventListeners = listeners;
     };
     FragmentInstance.prototype.removeEventListener = function (
@@ -33019,22 +33049,29 @@ __DEV__ &&
       optionsOrUseCapture
     ) {
       var listeners = this._eventListeners;
-      if (null !== listeners) {
-        var index = indexOfEventListener(
+      if (
+        null !== listeners &&
+        ((listener = indexOfEventListener(
           listeners,
           type,
           listener,
           optionsOrUseCapture
+        )),
+        -1 !== listener)
+      ) {
+        var _listeners$index = listeners[listener];
+        optionsOrUseCapture = _listeners$index.attachedListener;
+        _listeners$index = getAttachOptions(
+          _listeners$index.optionsOrUseCapture
         );
-        -1 !== index &&
-          (traverseFragmentInstancesAndTextInstances(
-            this._fragmentFiber,
-            removeEventListenerFromChild,
-            type,
-            listener,
-            optionsOrUseCapture
-          ),
-          listeners.splice(index, 1));
+        traverseFragmentInstancesAndTextInstances(
+          this._fragmentFiber,
+          removeEventListenerFromChild,
+          type,
+          optionsOrUseCapture,
+          _listeners$index
+        );
+        listeners.splice(listener, 1);
       }
     };
     FragmentInstance.prototype.dispatchEvent = function (event) {
@@ -33048,14 +33085,17 @@ __DEV__ &&
         (null !== eventListeners && 0 < eventListeners.length) ||
         !event.bubbles
       ) {
-        var temp = document.createTextNode("");
+        var temp =
+          parentHostFiber.nodeType === DOCUMENT_NODE
+            ? parentHostFiber.createComment("")
+            : document.createTextNode("");
         if (eventListeners)
           for (var i = 0; i < eventListeners.length; i++) {
             var _eventListeners$i = eventListeners[i];
             temp.addEventListener(
               _eventListeners$i.type,
-              _eventListeners$i.listener,
-              _eventListeners$i.optionsOrUseCapture
+              _eventListeners$i.attachedListener,
+              getAttachOptions(_eventListeners$i.optionsOrUseCapture)
             );
           }
         parentHostFiber.appendChild(temp);
@@ -33065,8 +33105,8 @@ __DEV__ &&
             (_eventListeners$i = eventListeners[i]),
               temp.removeEventListener(
                 _eventListeners$i.type,
-                _eventListeners$i.listener,
-                _eventListeners$i.optionsOrUseCapture
+                _eventListeners$i.attachedListener,
+                getAttachOptions(_eventListeners$i.optionsOrUseCapture)
               );
         parentHostFiber.removeChild(temp);
         return event;
@@ -33636,11 +33676,11 @@ __DEV__ &&
       return_targetInst = null;
     (function () {
       var isomorphicReactPackageVersion = React.version;
-      if ("19.3.0-www-classic-809280d5-20260811" !== isomorphicReactPackageVersion)
+      if ("19.3.0-www-classic-6c3bd60a-20260824" !== isomorphicReactPackageVersion)
         throw Error(
           'Incompatible React versions: The "react" and "react-dom" packages must have the exact same version. Instead got:\n  - react:      ' +
             (isomorphicReactPackageVersion +
-              "\n  - react-dom:  19.3.0-www-classic-809280d5-20260811\nLearn more: https://react.dev/warnings/version-mismatch")
+              "\n  - react-dom:  19.3.0-www-classic-6c3bd60a-20260824\nLearn more: https://react.dev/warnings/version-mismatch")
         );
     })();
     ("function" === typeof Map &&
@@ -33683,10 +33723,10 @@ __DEV__ &&
       !(function () {
         var internals = {
           bundleType: 1,
-          version: "19.3.0-www-classic-809280d5-20260811",
+          version: "19.3.0-www-classic-6c3bd60a-20260824",
           rendererPackageName: "react-dom",
           currentDispatcherRef: ReactSharedInternals,
-          reconcilerVersion: "19.3.0-www-classic-809280d5-20260811"
+          reconcilerVersion: "19.3.0-www-classic-6c3bd60a-20260824"
         };
         internals.overrideHookState = overrideHookState;
         internals.overrideHookStateDeletePath = overrideHookStateDeletePath;
@@ -34311,7 +34351,7 @@ __DEV__ &&
     exports.useFormStatus = function () {
       return resolveDispatcher().useHostTransitionStatus();
     };
-    exports.version = "19.3.0-www-classic-809280d5-20260811";
+    exports.version = "19.3.0-www-classic-6c3bd60a-20260824";
     "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ &&
       "function" ===
         typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop &&

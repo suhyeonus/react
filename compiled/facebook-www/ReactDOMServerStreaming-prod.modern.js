@@ -3881,6 +3881,7 @@ function RequestInstance(
   this.onShellReady = void 0 === onShellReady ? noop : onShellReady;
   this.onShellError = void 0 === onShellError ? noop : onShellError;
   this.onFatalError = void 0 === onFatalError ? noop : onFatalError;
+  this.renderLifetimeController = null;
   this.formState = void 0 === formState ? null : formState;
 }
 var currentRequest = null;
@@ -4102,6 +4103,7 @@ function fatalError(request, error) {
     onFatalError = request.onFatalError;
   0 !== request.pendingRootTasks && onShellError(error);
   onFatalError(error);
+  endRenderLifetime(request);
   null !== request.destination
     ? ((request.status = 13),
       (request = request.destination),
@@ -6738,6 +6740,7 @@ function flushCompletedQueues(request, destination) {
         (i = request.resumableState),
         i.hasBody && writeChunk(destination, endChunkForTag("body")),
         i.hasHtml && writeChunk(destination, endChunkForTag("html")),
+        endRenderLifetime(request),
         (request.status = 13),
         (destination.done = !0),
         (request.destination = null));
@@ -6771,8 +6774,13 @@ function finishAbort(request, abortableTasks) {
     logRecoverableError(request, error$74, {}), fatalError(request, error$74);
   }
 }
+function endRenderLifetime(request) {
+  request = request.renderLifetimeController;
+  null !== request && request.abort("The render ended.");
+}
 function abort(request, reason) {
   if (!(request.aborted || (11 !== request.status && 10 !== request.status))) {
+    endRenderLifetime(request);
     var isRecoverableReason =
       "object" === typeof reason &&
       null !== reason &&

@@ -3970,6 +3970,7 @@ function RequestInstance(
   this.onShellReady = void 0 === onShellReady ? noop : onShellReady;
   this.onShellError = void 0 === onShellError ? noop : onShellError;
   this.onFatalError = void 0 === onFatalError ? noop : onFatalError;
+  this.renderLifetimeController = null;
   this.formState = void 0 === formState ? null : formState;
 }
 function createRequest(
@@ -4254,6 +4255,7 @@ function fatalError(request, error) {
     onFatalError = request.onFatalError;
   0 !== request.pendingRootTasks && onShellError(error);
   onFatalError(error);
+  endRenderLifetime(request);
   null !== request.destination
     ? ((request.status = 13), request.destination.destroy(error))
     : ((request.status = 12), request.aborted || (request.fatalError = error));
@@ -7000,6 +7002,7 @@ function flushCompletedQueues(request, destination) {
           ((partialBoundaries = endChunkForTag("body")),
           destination.push(partialBoundaries)),
         i.hasHtml && ((i = endChunkForTag("html")), destination.push(i)),
+        endRenderLifetime(request),
         (request.status = 13),
         destination.push(null),
         (request.destination = null));
@@ -7049,8 +7052,13 @@ function finishAbort(request, abortableTasks) {
     logRecoverableError(request, error$74, {}), fatalError(request, error$74);
   }
 }
+function endRenderLifetime(request) {
+  request = request.renderLifetimeController;
+  null !== request && request.abort("The render ended.");
+}
 function abort(request, reason) {
   if (!(request.aborted || (11 !== request.status && 10 !== request.status))) {
+    endRenderLifetime(request);
     var isRecoverableReason =
       "object" === typeof reason &&
       null !== reason &&
@@ -7152,4 +7160,4 @@ exports.renderToString = function (children, options) {
     'The server used "renderToString" which does not support Suspense. If you intended for this Suspense boundary to render the fallback content on the server consider throwing an Error somewhere within the Suspense boundary. If you intended to have the server wait for the suspended component please switch to "renderToReadableStream" which supports Suspense on the server'
   );
 };
-exports.version = "19.3.0-www-modern-809280d5-20260811";
+exports.version = "19.3.0-www-modern-6c3bd60a-20260824";
